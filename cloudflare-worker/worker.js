@@ -46,6 +46,11 @@ export default {
       return new Response(null, { status: 204, headers: CORS });
     }
 
+    // Version probe so we can confirm which Worker code is deployed.
+    if (new URL(request.url).pathname === "/version") {
+      return withCors(new Response("vgs-worker v4", { headers: { "Content-Type": "text/plain" } }));
+    }
+
     const target = new URL(request.url).searchParams.get("url");
     if (!target || !isAllowed(target)) {
       return withCors(new Response(JSON.stringify({ error: "Missing or disallowed ?url= target." }), {
