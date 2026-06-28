@@ -7,6 +7,13 @@ class AuthError extends Error {}
 
 // Verified NVIDIA NVCF invoke endpoint for cosmos3-nano (fallback used on 404/405).
 const NVIDIA_VERIFIED_ENDPOINT = "https://api.nvcf.nvidia.com/v2/nvcf/pexec/functions/d09cd49d-d7f2-4361-928f-ea22af707249";
+// Candidate endpoints tried in order until one doesn't return 404/405.
+const NVIDIA_ENDPOINTS = [
+  "https://api.nvcf.nvidia.com/v2/nvcf/pexec/functions/d09cd49d-d7f2-4361-928f-ea22af707249",
+  "https://ai.api.nvidia.com/v1/infer",
+  "https://ai.api.nvidia.com/v1/genai/nvidia/cosmos3-nano",
+  "https://api.nvcf.nvidia.com/v2/nvcf/exec/functions/d09cd49d-d7f2-4361-928f-ea22af707249"
+];
 
 function fileToDataURL(file) {
   return new Promise((resolve, reject) => {
@@ -78,20 +85,24 @@ const NvidiaAdapter = {
       signal
     });
 
-    // Use the configured/overridden URL, but auto-fall back to the verified NVCF
-    // endpoint if it 404/405s (handles any stale override silently).
-    let usedUrl = Providers.endpointFor("nvidia");
-    onStatus("submitting to NVIDIA…");
-    let res = await post(usedUrl);
-    if ((res.status === 404 || res.status === 405) && usedUrl !== NVIDIA_VERIFIED_ENDPOINT) {
-      onStatus("retrying with verified endpoint…");
-      usedUrl = NVIDIA_VERIFIED_ENDPOINT;
+    // Try the configured/overridden URL first, then each known candidate, until one
+    // doesn't return 404/405. This auto-discovers the URL that accepts your key.
+    const tryList = [];
+    const configured = Providers.endpointFor("nvidia");
+    if (configured) tryList.push(configured);
+    NVIDIA_ENDPOINTS.forEach(u => { if (tryList.indexOf(u) === -1) tryList.push(u); });
+
+    let res = null, usedUrl = null;
+    for (let i = 0; i < tryList.length; i++) {
+      usedUrl = tryList[i];
+      onStatus(i === 0 ? "submitting to NVIDIA…" : "trying alternate endpoint…");
       res = await post(usedUrl);
+      if (res.status !== 404 && res.status !== 405) break; // found a usable endpoint
     }
 
     if (res.status === 401 || res.status === 403) throw new AuthError("API key was rejected by NVIDIA (check the nvapi- key).");
     if (res.status === 404 || res.status === 405) {
-      throw new Error("Endpoint rejected the request (HTTP " + res.status + "). Tried: " + usedUrl + " — clear any text in 'Advanced: override endpoint URL' and retry.");
+      throw new Error("No NVIDIA endpoint accepted the request (last: HTTP " + res.status + "). The model's URL may have changed — get the exact URL from the model page and paste it into 'Advanced: override endpoint URL'.");
     }
     if (!res.ok) {
       let msg = "HTTP " + res.status;
