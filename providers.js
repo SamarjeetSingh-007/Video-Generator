@@ -5,6 +5,9 @@
 
 class AuthError extends Error {}
 
+// Verified NVIDIA NVCF invoke endpoint for cosmos3-nano (fallback used on 404/405).
+const NVIDIA_VERIFIED_ENDPOINT = "https://api.nvcf.nvidia.com/v2/nvcf/pexec/functions/d09cd49d-d7f2-4361-928f-ea22af707249";
+
 function fileToDataURL(file) {
   return new Promise((resolve, reject) => {
     const r = new FileReader();
@@ -62,27 +65,38 @@ const NvidiaAdapter = {
     if (req.images && req.images.length) {
       body.image = await fileToDataURL(req.images[0]); // data URI; T2V→I2V inferred automatically
     }
+    const payload = JSON.stringify(body);
 
-    onStatus("submitting to NVIDIA…");
-    const res = await fetch(proxied(Providers.endpointFor("nvidia")), {
+    const post = (targetUrl) => fetch(proxied(targetUrl), {
       method: "POST",
       headers: {
         Authorization: "Bearer " + apiKey,
         "Content-Type": "application/json",
         Accept: "application/json"
       },
-      body: JSON.stringify(body),
+      body: payload,
       signal
     });
 
-    if (res.status === 401 || res.status === 403) throw new AuthError("API key was rejected by NVIDIA.");
+    // Use the configured/overridden URL, but auto-fall back to the verified NVCF
+    // endpoint if it 404/405s (handles any stale override silently).
+    let usedUrl = Providers.endpointFor("nvidia");
+    onStatus("submitting to NVIDIA…");
+    let res = await post(usedUrl);
+    if ((res.status === 404 || res.status === 405) && usedUrl !== NVIDIA_VERIFIED_ENDPOINT) {
+      onStatus("retrying with verified endpoint…");
+      usedUrl = NVIDIA_VERIFIED_ENDPOINT;
+      res = await post(usedUrl);
+    }
+
+    if (res.status === 401 || res.status === 403) throw new AuthError("API key was rejected by NVIDIA (check the nvapi- key).");
     if (res.status === 404 || res.status === 405) {
-      throw new Error("Wrong endpoint (HTTP " + res.status + "). NVIDIA's URL is unique to this model — copy the exact URL from the cosmos3-nano page's Shell/cURL sample and paste it into 'Advanced: override endpoint URL'.");
+      throw new Error("Endpoint rejected the request (HTTP " + res.status + "). Tried: " + usedUrl + " — clear any text in 'Advanced: override endpoint URL' and retry.");
     }
     if (!res.ok) {
       let msg = "HTTP " + res.status;
       try { const j = await res.json(); msg = j.detail || j.message || (j.error && j.error.message) || msg; } catch (e) {}
-      throw new Error(msg);
+      throw new Error(msg + " (endpoint: " + usedUrl + ")");
     }
 
     onStatus("decoding result");
