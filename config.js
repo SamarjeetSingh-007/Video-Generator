@@ -57,10 +57,12 @@ const PROVIDERS = {
     docs: "Free API key from build.nvidia.com. Physics-aware video from text or image. 720p, ~5–10s clips, commercial-use OK. Requires your CORS proxy (Cloudflare Worker).",
     keyHint: "Key starts with nvapi-… — get it on the cosmos3-nano page (‘Get API Key’).",
     flow: "nvidia",
-    // Exact invoke URL for the hosted model. If NVIDIA changes it, copy the URL from the
-    // "Shell / cURL" sample on the cosmos3-nano page and paste it here.
-    endpoint: "https://ai.api.nvidia.com/v1/cosmos/nvidia/cosmos3-nano",
+    // Exact invoke URL for the hosted model. If you get a 404/405, open the cosmos3-nano
+    // page → "Get API Key" / the Python or Shell code sample, copy the invoke_url it shows,
+    // and paste it into the app's "Advanced: override endpoint URL" box.
+    endpoint: "https://ai.api.nvidia.com/v1/genai/nvidia/cosmos3-nano",
     fps: 16,
+    maxFrames: 197,
     models: [
       model("cosmos3-nano", "Cosmos3 Nano — physics-aware video", {
         text: true, image: true,

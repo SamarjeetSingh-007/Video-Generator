@@ -49,14 +49,18 @@ const NvidiaAdapter = {
     if (!Providers.proxyUrl) throw new Error("Set your Proxy URL first (NVIDIA blocks direct browser calls).");
 
     const fps = PROVIDERS.nvidia.fps || 16;
+    const maxFrames = PROVIDERS.nvidia.maxFrames || 197;
     const body = {
       prompt: req.prompt || "",
-      resolution: nvidiaResString(req.aspect),
-      num_output_frames: Math.max(16, Math.round(req.length * fps)),
+      resolution: nvidiaResString(req.aspect),               // e.g. "720_16_9"
+      num_output_frames: Math.min(maxFrames, Math.max(16, Math.round(req.length * fps))),
+      fps: fps,
+      steps: 35,
+      guidance_scale: 6.0,
       seed: Math.floor(Math.random() * 1e6)
     };
     if (req.images && req.images.length) {
-      body.image = await fileToDataURL(req.images[0]); // data URI; field per model card
+      body.image = await fileToDataURL(req.images[0]); // data URI; T2V→I2V inferred automatically
     }
 
     onStatus("submitting to NVIDIA…");
@@ -72,6 +76,9 @@ const NvidiaAdapter = {
     });
 
     if (res.status === 401 || res.status === 403) throw new AuthError("API key was rejected by NVIDIA.");
+    if (res.status === 404 || res.status === 405) {
+      throw new Error("Endpoint not found (HTTP " + res.status + "). Open the cosmos3-nano page → 'Get API Key' / code sample, copy the invoke_url, and paste it into 'Advanced: override endpoint URL'.");
+    }
     if (!res.ok) {
       let msg = "HTTP " + res.status;
       try { const j = await res.json(); msg = j.detail || j.message || (j.error && j.error.message) || msg; } catch (e) {}
