@@ -77,7 +77,7 @@ const NvidiaAdapter = {
 
     if (res.status === 401 || res.status === 403) throw new AuthError("API key was rejected by NVIDIA.");
     if (res.status === 404 || res.status === 405) {
-      throw new Error("Endpoint not found (HTTP " + res.status + "). Open the cosmos3-nano page → 'Get API Key' / code sample, copy the invoke_url, and paste it into 'Advanced: override endpoint URL'.");
+      throw new Error("Wrong endpoint (HTTP " + res.status + "). NVIDIA's URL is unique to this model — copy the exact URL from the cosmos3-nano page's Shell/cURL sample and paste it into 'Advanced: override endpoint URL'.");
     }
     if (!res.ok) {
       let msg = "HTTP " + res.status;
