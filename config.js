@@ -57,10 +57,9 @@ const PROVIDERS = {
     docs: "Free API key from build.nvidia.com. Physics-aware video from text or image. 720p, ~5–10s clips, commercial-use OK. Requires your CORS proxy (Cloudflare Worker).",
     keyHint: "Key starts with nvapi-… — get it on the cosmos3-nano page (‘Get API Key’).",
     flow: "nvidia",
-    // Exact invoke URL for the hosted model. If you get a 404/405, open the cosmos3-nano
-    // page → "Get API Key" / the Python or Shell code sample, copy the invoke_url it shows,
-    // and paste it into the app's "Advanced: override endpoint URL" box.
-    endpoint: "https://ai.api.nvidia.com/v1/genai/nvidia/cosmos3-nano",
+    // Verified NVIDIA NVCF invoke endpoint for cosmos3-nano (the function ID is unique to
+    // this model). If it ever changes, get the new URL from the page and use the override box.
+    endpoint: "https://api.nvcf.nvidia.com/v2/nvcf/pexec/functions/d09cd49d-d7f2-4361-928f-ea22af707249",
     fps: 16,
     maxFrames: 197,
     models: [

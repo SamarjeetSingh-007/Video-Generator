@@ -59,6 +59,10 @@ export default {
       const v = request.headers.get(k);
       if (v) fwd.set(k, v);
     });
+    // Ask NVCF to wait (long-poll) so it often returns the result in one response.
+    if (target.indexOf("api.nvcf.nvidia.com") !== -1) {
+      fwd.set("NVCF-POLL-SECONDS", "300");
+    }
 
     const init = { method: request.method, headers: fwd };
     if (request.method !== "GET" && request.method !== "HEAD") {
@@ -72,10 +76,11 @@ export default {
       const reqId = resp.headers.get("nvcf-reqid") || resp.headers.get("NVCF-REQID");
       if (reqId) {
         const auth = fwd.get("authorization");
-        const pollUrl = "https://api.nvcf.nvidia.com/v2/nvcf/pollResult/" + reqId;
-        for (let i = 0; i < 140; i++) { // ~280s max
-          await new Promise(r => setTimeout(r, 2000));
-          resp = await fetch(pollUrl, { headers: { "Authorization": auth, "Accept": "application/json" } });
+        const pollUrl = "https://api.nvcf.nvidia.com/v2/nvcf/pexec/status/" + reqId;
+        for (let i = 0; i < 140; i++) { // ~300s max
+          resp = await fetch(pollUrl, {
+            headers: { "Authorization": auth, "Accept": "application/json", "NVCF-POLL-SECONDS": "300" }
+          });
           if (resp.status !== 202) break;
         }
       }
