@@ -98,12 +98,19 @@ const NvidiaAdapter = {
 /* ---------- Hugging Face adapter ---------- */
 const HuggingFaceAdapter = {
   async listModels(apiKey) {
-    // Validate the token (also surfaces auth errors at catalog time).
-    const res = await fetch(proxied("https://huggingface.co/api/whoami-v2"), {
-      headers: { Authorization: "Bearer " + apiKey }
-    });
-    if (res.status === 401 || res.status === 403) throw new AuthError("API key was rejected by Hugging Face.");
-    if (!res.ok) throw new Error("Hugging Face responded with HTTP " + res.status + ".");
+    // whoami is CORS-friendly, so call it directly (no proxy needed) to validate the key.
+    // Only a real auth rejection blocks; anything else still shows the curated models.
+    try {
+      const res = await fetch("https://huggingface.co/api/whoami-v2", {
+        headers: { Authorization: "Bearer " + apiKey }
+      });
+      if (res.status === 401 || res.status === 403) {
+        throw new AuthError("API key was rejected by Hugging Face.");
+      }
+    } catch (e) {
+      if (e instanceof AuthError) throw e;
+      // Network/other: don't block listing — generation will surface real errors later.
+    }
     return { models: PROVIDERS.huggingface.models };
   },
 
