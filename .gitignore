@@ -1,0 +1,23 @@
+# OS
+.DS_Store
+Thumbs.db
+
+# Editor
+.vscode/
+.idea/
+
+# Node / wrangler (only used for the optional CLI deploy)
+node_modules/
+.wrangler/
+cloudflare-worker/node_modules/
+cloudflare-worker/.wrangler/
+
+# Logs
+*.log
+
+# Local Playwright/browser artifacts
+.playwright-mcp/
+
+# Secrets — never commit keys
+.dev.vars
+*.env

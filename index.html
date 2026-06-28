@@ -1,0 +1,154 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Video Generation Studio</title>
+  <link rel="icon" type="image/svg+xml" href="favicon.svg" />
+  <link rel="apple-touch-icon" href="favicon.svg" />
+  <meta name="theme-color" content="#0d0f14" />
+  <link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+  <header class="topbar">
+    <div class="brand">
+      <span class="logo">🎬</span>
+      <div>
+        <h1>Video Generation Studio</h1>
+        <p class="tagline">Bring your own key. Generate cinematic clips. Stitch them into an ad.</p>
+      </div>
+    </div>
+    <button id="helpBtn" class="ghost-btn" type="button">Where do I get a free key?</button>
+  </header>
+
+  <main class="layout">
+    <!-- LEFT: setup -->
+    <section class="panel" id="setupPanel">
+      <h2>1 · Provider &amp; Key</h2>
+
+      <label class="field-label" for="proxyInput">Proxy URL (Cloudflare Worker)</label>
+      <input id="proxyInput" class="control" type="text" placeholder="https://your-worker.workers.dev" autocomplete="off" spellcheck="false" />
+      <p class="hint">Required — both providers route through it. See "Where do I get a free key?" for the 1-time setup.</p>
+
+      <label class="field-label" for="providerSelect">Provider</label>
+      <select id="providerSelect" class="control"></select>
+
+      <div id="providerDocs" class="hint"></div>
+
+      <details class="advanced">
+        <summary>Advanced: override endpoint URL</summary>
+        <input id="endpointInput" class="control" type="text" placeholder="Leave blank to use the default" autocomplete="off" spellcheck="false" />
+        <p class="hint" id="endpointHint"></p>
+      </details>
+
+      <label class="field-label" for="apiKeyInput">API Key</label>
+      <div class="key-row">
+        <input id="apiKeyInput" class="control" type="password" placeholder="Paste your API key" autocomplete="off" spellcheck="false" />
+        <button id="revealKeyBtn" class="icon-btn" type="button" title="Show / hide key" aria-label="Show or hide API key">👁</button>
+      </div>
+      <div class="btn-row">
+        <button id="saveKeyBtn" class="primary-btn" type="button">Save key</button>
+        <button id="clearKeyBtn" class="ghost-btn" type="button">Remove saved key</button>
+      </div>
+      <p id="keyStatus" class="status"></p>
+      <p class="notice">⚠ Keys are stored in your browser's localStorage on this device only, readable by scripts on this page. They are sent only to the selected provider's endpoint, never to any server of ours.</p>
+
+      <hr />
+
+      <h2>2 · Model</h2>
+      <div class="btn-row">
+        <button id="fetchModelsBtn" class="primary-btn" type="button">Fetch models</button>
+        <span id="modelsLoading" class="loading hidden">Loading…</span>
+      </div>
+      <p id="modelMessage" class="status"></p>
+      <div id="modelList" class="model-list"></div>
+    </section>
+
+    <!-- MIDDLE: inputs -->
+    <section class="panel" id="inputPanel">
+      <h2>3 · Inputs</h2>
+
+      <div id="inputGuard" class="status muted">Select a model to begin.</div>
+
+      <div id="textInputWrap" class="input-block">
+        <label class="field-label" for="promptInput">Prompt <span id="promptCount" class="count">0 / 5000</span></label>
+        <textarea id="promptInput" class="control" rows="5" maxlength="5000" placeholder="Describe your shot. e.g. 'Slow cinematic dolly shot of a sleek matte-black water bottle on wet stone, soft morning light, shallow depth of field, premium product ad.'"></textarea>
+      </div>
+
+      <div id="imageInputWrap" class="input-block">
+        <label class="field-label">Reference images <span class="count" id="imgCount">0 / 4</span></label>
+        <div id="dropZone" class="drop-zone" tabindex="0">
+          <p>Click to upload, or paste an image (Ctrl/Cmd+V). JPEG / PNG / WebP, ≤ 10 MB, up to 4.</p>
+          <input id="imageFile" type="file" accept="image/jpeg,image/png,image/webp" multiple hidden />
+        </div>
+        <div id="thumbs" class="thumbs"></div>
+      </div>
+
+      <hr />
+
+      <h2>4 · Options</h2>
+      <div class="options-grid">
+        <div>
+          <label class="field-label">Aspect ratio</label>
+          <div id="aspectOptions" class="chip-row"></div>
+        </div>
+        <div>
+          <label class="field-label">Resolution</label>
+          <div id="resolutionOptions" class="chip-row"></div>
+        </div>
+        <div>
+          <label class="field-label">Clip length</label>
+          <div id="lengthOptions" class="chip-row"></div>
+        </div>
+      </div>
+
+      <div class="btn-row generate-row">
+        <button id="generateBtn" class="primary-btn big" type="button" disabled>Generate clip</button>
+        <button id="cancelBtn" class="ghost-btn hidden" type="button">Cancel</button>
+      </div>
+      <p id="genMessage" class="status"></p>
+
+      <div id="jobProgress" class="job-progress hidden">
+        <div class="spinner"></div>
+        <div>
+          <div id="jobStatusText" class="job-status">Submitting…</div>
+          <div id="jobElapsed" class="job-elapsed">0s elapsed</div>
+        </div>
+      </div>
+    </section>
+
+    <!-- RIGHT: project / output -->
+    <section class="panel" id="projectPanel">
+      <h2>5 · Project &amp; Output</h2>
+      <p class="hint">Each finished clip is added below. Reorder, remove, then stitch into one ad (15–30s).</p>
+
+      <div id="segmentList" class="segment-list"></div>
+
+      <div class="btn-row">
+        <button id="assembleBtn" class="primary-btn" type="button" disabled>Stitch into one video</button>
+      </div>
+      <p id="assembleMessage" class="status"></p>
+
+      <div id="assembledWrap" class="assembled hidden">
+        <h3>Final ad</h3>
+        <video id="assembledVideo" class="preview-video" controls></video>
+        <button id="downloadAssembledBtn" class="primary-btn" type="button">Download final video</button>
+      </div>
+    </section>
+  </main>
+
+  <!-- Help / free-key guide modal -->
+  <div id="helpModal" class="modal hidden">
+    <div class="modal-card">
+      <button id="closeHelpBtn" class="modal-close" type="button" aria-label="Close">✕</button>
+      <div id="helpContent"></div>
+    </div>
+  </div>
+
+  <script src="config.js"></script>
+  <script src="storage.js"></script>
+  <script src="providers.js"></script>
+  <script src="assembler.js"></script>
+  <script src="app.js"></script>
+</body>
+</html>
